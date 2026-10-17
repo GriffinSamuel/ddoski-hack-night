@@ -1,65 +1,125 @@
-# Hackathon Starter
+# Face-Roast Editor
 
-A template for building a hackathon project with a team of 13 Claude subagents, run by the main Claude Code session as the orchestrator. Copy this folder for each hackathon and never build inside the template itself.
+A webcam reads your mood and a meme avatar punishes your code: sad gets roasted, too happy gets deleted.
 
-**Stack:** Next.js 15 + Tailwind (`apps/web`), FastAPI + Pydantic v2 (`apps/api`), Supabase for database and login (`supabase/migrations`), Claude API called only from the backend, Vercel for hosting.
+A VS Code-style editor in the browser (Monaco, dark theme, tabs, status bar). It is not a real VS Code extension.
 
-**How the agents work together:** agents never talk to each other. They read and write shared files in `docs/` (SPEC, DESIGN, API, DECISIONS, TEST_REPORT, REVIEW, PITCH), and each one owns specific folders so parallel agents never edit the same file. `CLAUDE.md` has the full ownership table.
+## What it does
 
----
+- **Sad face:** the avatar dances and pulls mean faces, and 2 to 4 insulting comments are inserted above your cursor line. Your code is never modified.
+- **Happy face:** the avatar turns smug, and condescending "could be better" tips are inserted as comments.
+- **Super-happy face:** a 3-second overlay plays, the whole file is replaced by a mocking comment and ASCII art, and the avatar laughs at you. "Undo roast" or Ctrl+Z brings the code back.
+- **Three avatars:** Labubu, CalHacks Bear, Rubber Duck. Each has its own voice, so the same code gets roasted differently.
+- **Profane or clean:** mild cursing by default, one hotkey to flip to a clean version of the same jokes.
+- **Private:** the emotion model runs in the browser. Webcam frames never leave it.
+- **Works offline:** a pre-written roast bank lives in the frontend, so roasts work with the backend off and Ollama not running. If a local Ollama model is up, roasts name real variables and functions from your file.
+- **Safe:** edits touch only in-memory editor buffers. Nothing is written to disk, and reload resets both files.
 
-## The pipeline
+## Run it locally (about 60 seconds)
 
-| Phase | Command | Agents | Runs |
-|---|---|---|---|
-| 1. Scope | `/kickoff <idea>` | project-idea-validator, then product-manager, then ui-designer | one after another, with a stop after validation for your go/no-go |
-| 2. Contract | (same command) | api-designer | once |
-| 3. Build | `/build` | nextjs-developer, fastapi-developer, auth-integration-engineer, then prompt-engineer if the app uses AI | first three in parallel |
-| 4. Verify | `/verify` | test-automator, surgeon-reviewer, then debugger once per failure | first two in parallel |
-| 5. Ship | `/ship` | readme-generator, landing-page-copywriter | in parallel |
+Prerequisites: Node 20+, Python 3.11, and [Ollama](https://ollama.com) running with the model pulled (optional: without it the app uses the roast bank).
 
-**Using Figma:** add `| Figma: <link>` to `/kickoff` (or put the link in `docs/BRIEF.md`). The main session reads the design into `docs/FIGMA_NOTES.md` and ui-designer matches it exactly. Figma must be connected in your Claude Code session (check with `/mcp`).
+```text
+ollama pull qwen2.5-coder:7b
+```
 
-If a slash command doesn't show up in your Claude app, open the matching file in `.claude/commands/` and paste its contents instead (replace `$ARGUMENTS` with your idea).
+1. From the repo root, run setup once (creates `apps/api/.venv`, installs npm and pip packages):
 
----
-
-## Setup for a new hackathon (about 10 minutes)
-
-1. Copy the `hackathon-starter` folder and rename the copy for the event.
-2. Open the copy in Claude Code and have it run setup from the repo root:
-   ```
+   ```text
    powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
    ```
-3. Start both servers and open http://localhost:3000. The status page should show the backend reachable and Supabase keys ready:
-   ```
-   powershell -ExecutionPolicy Bypass -File scripts\dev.ps1
-   ```
-4. Make it a git repo:
-   ```
-   git init; git add .; git commit -m "Starter kit"
+
+2. Start the backend. The first start waits about 50 s for the model warm-up when Ollama is cold:
+
+   ```text
+   cd apps/api && .venv/Scripts/uvicorn.exe app.main:app --reload --port 8000
    ```
 
-Env values live in `apps/api/.env` (backend secrets) and `apps/web/.env.local` (frontend). Both are gitignored. The Supabase keys are already filled in; add `ANTHROPIC_API_KEY` to `apps/api/.env` only if the app uses AI.
+3. In a second terminal, start the frontend:
 
----
+   ```text
+   cd apps/web && npm run dev
+   ```
 
-## Folder layout
+4. Open http://localhost:3000 and allow the camera. Use desktop Chrome.
+
+If the camera is denied, the status bar reads "Camera unavailable - manual mode" and the hotkeys below still drive everything.
+
+## Demo hotkeys
+
+Hidden in the UI, captured at window level, so they work with the editor focused. Forced emotions skip the 1.5 s hold and the cooldown.
+
+| Key | Action |
+|-----|--------|
+| Alt+1 | Force neutral |
+| Alt+2 | Force sad |
+| Alt+3 | Force happy |
+| Alt+4 | Force super-happy |
+| Alt+0 | Pause or resume camera detection |
+| Alt+P | Toggle roast mode, profane or clean (status bar shows "Mode: ...") |
+| Undo roast button / Ctrl+Z | Restore the code from before the last edit |
+
+With the camera, hold a sad, happy, or super-happy face for 1.5 s. After an edit there is a 6 s cooldown.
+
+## Architecture
+
+```text
+ Browser (Next.js, desktop Chrome)                  Your laptop
++------------------------------------------+
+| Webcam -> face-expression model (local)  |
+|              |                           |
+|        emotion + hold timer              |       +-------------------+
+|              |                           | POST  |  FastAPI :8000    |      +-----------------------+
+|   Monaco editor <- roast bank (offline) -+------>|  /api/v1/roast    |----->| Ollama                |
+|   avatar panel, status bar               |<------+  (7 s client cap) |<-----| qwen2.5-coder:7b      |
++------------------------------------------+ JSON  +-------------------+      +-----------------------+
+        on any error or timeout: use the roast bank, status bar shows "AI offline - using roast bank"
 ```
-CLAUDE.md                    project rules, ownership table, pipeline (every agent reads it)
-.claude/agents/              the 13 subagents
-.claude/commands/            /kickoff /build /verify /ship
-docs/AGENT_BRIEF.md          how the agent files were written (edit agents directly to change behavior)
-docs/DECISIONS.md            append-only decision log plus open questions
-apps/api/app/main.py         FastAPI app factory, CORS, error envelope
-apps/api/app/config.py       settings read from apps/api/.env
-apps/api/app/routers/        one router per resource (health.py is the starter)
-apps/web/app/                Next.js pages (page.tsx is a starter status page)
-supabase/migrations/         SQL schema and RLS policies
-scripts/                     setup and dev helpers (PowerShell and bash)
-```
 
-## Deploying
-- **Frontend:** import the repo in Vercel, set Root Directory to `apps/web`, and add the `NEXT_PUBLIC_*` variables.
-- **Backend:** fastapi-developer writes the deploy config for the target recorded in `docs/DECISIONS.md` (a Vercel Python function by default, Railway or Render if any endpoint streams). Add the backend variables from `.env.example` and set `ALLOWED_ORIGINS` to the Vercel URL.
-- Deploy early, within the first few hours, so the final hour isn't a deploy fire.
+## API
+
+Full contract in [docs/API.md](docs/API.md). Interactive docs at http://localhost:8000/docs while the backend runs.
+
+- `GET /api/v1/health` returns `status` and `ai_configured` (true once the Ollama warm-up succeeded).
+- `POST /api/v1/roast` takes `code`, `emotion` (sad, happy, super-happy), `avatar`, `mode` (profane, clean) and optional `file_name`. It returns 2 to 4 comment lines (sad, happy) or a mocking comment block plus ASCII art (super-happy). Errors are `ai_unavailable` 503, `ai_error` 502, `ai_timeout` 504, and the client falls back to the bank on any of them.
+
+## Environment variables
+
+Names are in `.env.example`. Backend values go in `apps/api/.env`, frontend values in `apps/web/.env.local`; both are gitignored. The defaults work for the demo.
+
+| Name | Used by | Purpose |
+|------|---------|---------|
+| `OLLAMA_BASE_URL` | api | Optional. Ollama address. Default `http://localhost:11434`. |
+| `OLLAMA_MODEL` | api | Optional. Model used for roasts. Default `qwen2.5-coder:7b`. |
+| `ALLOWED_ORIGINS` | api | CORS origins. `http://localhost:3000` in `.env.example`. |
+| `NEXT_PUBLIC_API_URL` | web | Backend address the web app calls (local: `http://localhost:8000`). |
+| `NEXT_PUBLIC_SITE_URL` | web | Site URL (local: `http://localhost:3000`). |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` | web, api | Unused by this MVP (no login, no database). |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | api | Unused by this MVP (the AI is local Ollama). |
+| `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `BASE_URL` | tests | Test-only. |
+
+## Content rule
+
+Two modes, both bounded. Profane allows mild cursing ("dumbass", "damn", "shit code") aimed only at the code and the user's coding skill. Clean has no cursing. In both modes: no slurs, nothing about race, gender, sexuality, religion, disability, nationality, or any protected group, no threats, no self-harm references, and nothing about the user's appearance. This applies to the roast bank and the AI prompt, and the backend drops model output that breaks it.
+
+## Built with
+
+- Next.js 15 (App Router), TypeScript, Tailwind v4
+- Monaco editor (`@monaco-editor/react`)
+- `@vladmandic/face-api` for in-browser expression detection
+- FastAPI, Pydantic v2, httpx
+- Ollama running `qwen2.5-coder:7b` locally
+
+## Known limitations
+
+- Desktop Chrome only. No mobile layout, no light theme.
+- Detection is sensitive to lighting. Dim rooms and projector glare can misread a face, which is why the hotkeys and the live meter exist.
+- A 7B local model gives uneven roast quality. When it is slow or wrong, the bank takes over.
+- Python is the only editor language, and the two files are seeded (`bad_code.py`, `good_code.py`).
+- Avatar images are idle-state only. Missing images fall back to emoji faces.
+
+## Docs
+
+[docs/SPEC.md](docs/SPEC.md) (scope and demo script) · [docs/API.md](docs/API.md) (contract) · [docs/DECISIONS.md](docs/DECISIONS.md) (decision log)
+
+Team: solo, built with an agent pipeline for a hackathon.

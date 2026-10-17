@@ -1,31 +1,27 @@
 # Starter skeleton written to fastapi-developer's conventions (create_app, lifespan, error envelope, /api/v1).
 # fastapi-developer extends this: add one router per resource and register it in create_app().
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from anthropic import AsyncAnthropic
-from supabase import create_client
 
 from app.config import get_settings
-from app.routers import health
+from app.errors import error_body
+from app.routers import health, roast
+from app.services import ollama
+
+log = logging.getLogger("app.main")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    s = get_settings()
-    app.state.anthropic = AsyncAnthropic(api_key=s.anthropic_api_key or None)
-    app.state.supabase = (
-        create_client(s.supabase_url, s.supabase_service_role_key)
-        if s.supabase_url and s.supabase_service_role_key
-        else None
-    )
+    # Warm the model once so no demo request pays the cold load. Failure must not stop the app.
+    app.state.ai_ready = await ollama.warm_up()
+    if not app.state.ai_ready:
+        log.warning("AI provider not ready at startup; /api/v1/roast will re-check per request")
     yield
-
-
-def error_body(code: str, message: str) -> dict:
-    return {"error": {"code": code, "message": message}}
 
 
 def create_app() -> FastAPI:
@@ -49,6 +45,7 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=422, content=error_body("validation_error", "; ".join(f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors())))
 
     app.include_router(health.router)
+    app.include_router(roast.router)
     return app
 
 
