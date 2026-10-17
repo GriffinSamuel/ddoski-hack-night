@@ -18,7 +18,7 @@ import { useHotkeys } from "@/hooks/useHotkeys";
 import { ApiError, createRoast, getHealth } from "@/lib/api";
 import { getAvatar } from "@/lib/avatars";
 import type { EditorController } from "@/lib/editor-controller";
-import { getReplacement, getRoastBlock } from "@/lib/roast-bank";
+import { getReplacement, getRoastBlock, MAX_ROAST_LINES } from "@/lib/roast-bank";
 import { SEED_FILES } from "@/lib/seed-files";
 import type { AiStatus, AvatarId, AvatarState, Emotion, FileName, RoastEmotion, RoastMode } from "@/lib/types";
 
@@ -60,6 +60,7 @@ export function FaceRoastApp() {
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
 
   const controllerRef = useRef<EditorController | null>(null);
+  const recentRoastsRef = useRef<Set<string>>(new Set());
   const aiBlockedRef = useRef(!ENABLE_AI);
   const reactionTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const live = useRef({ activeFile, avatarId, mode });
@@ -122,16 +123,32 @@ export function FaceRoastApp() {
       const ai = await askAi(file, emotion);
       const controller = controllerRef.current;
       if (!controller) return;
+      // Never insert a line that is already in the file or was roasted recently; cap at MAX_ROAST_LINES.
+      const existing = controller.getCode(file).toLowerCase();
+      const fresh = (candidates: string[]) =>
+        candidates
+          .map((l) => l.trim())
+          .filter((l, i, arr) => l && arr.indexOf(l) === i)
+          .filter((l) => !existing.includes(l.toLowerCase()) && !recentRoastsRef.current.has(l.toLowerCase()))
+          .slice(0, MAX_ROAST_LINES);
+      const remember = (lines: string[]) => {
+        lines.forEach((l) => recentRoastsRef.current.add(l.toLowerCase()));
+        if (recentRoastsRef.current.size > 40) recentRoastsRef.current.clear();
+      };
       if (ai && ai.kind === "lines") {
-        const lines = ai.lines.map((l) => l.text).filter(Boolean);
+        const lines = fresh(ai.lines.map((l) => l.text));
         const atLine = ai.lines.find((l) => l.line !== null)?.line ?? null;
         if (lines.length > 0) {
+          remember(lines);
           controller.insertComments(file, lines, atLine);
           setBubble(lines[0]);
           return;
         }
       }
-      const lines = getRoastBlock(a, emotion, m);
+      let lines = fresh(getRoastBlock(a, emotion, m));
+      if (lines.length === 0) lines = fresh(getRoastBlock(a, emotion, m));
+      if (lines.length === 0) lines = getRoastBlock(a, emotion, m).slice(0, 1);
+      remember(lines);
       controller.insertComments(file, lines, null);
       setBubble(lines[0]);
     },

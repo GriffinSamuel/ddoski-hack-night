@@ -27,19 +27,24 @@ interface FaceProps {
 
 /** One face layer: the state's image if present and loadable, else the emoji/CSS fallback. */
 export function AvatarFace({ avatar, state, size, className = "" }: FaceProps) {
-  const src = avatar.images[state];
+  // A state without its own image reuses the idle photo so the character never appears to change.
+  const src = avatar.images[state] ?? avatar.images.idle;
+  const usingIdlePhoto = !avatar.images[state] && !!avatar.images.idle;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   if (src && failedSrc !== src) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={`${avatar.name} ${state}`}
-        className={`size-full object-contain ${className}`}
-        onError={() => setFailedSrc(src)}
-        draggable={false}
-      />
+      <div className={`relative size-full ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={`${avatar.name} ${state}`}
+          className="size-full object-contain"
+          onError={() => setFailedSrc(src)}
+          draggable={false}
+        />
+        {usingIdlePhoto && state !== "idle" && <span className={BADGE_CLASS[size]}>{STATE_BADGE[state]}</span>}
+      </div>
     );
   }
   return (

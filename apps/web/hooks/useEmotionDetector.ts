@@ -142,7 +142,8 @@ export function useEmotionDetector({ enabled, onFire }: Options): Detector {
       const now = performance.now();
       // The hold only starts counting once the cooldown after the last edit is over.
       const start = Math.max(heldSinceRef.current, lastFireRef.current + THRESHOLDS.cooldownMs);
-      const progress = Math.min(1, Math.max(0, (now - start) / THRESHOLDS.holdMs));
+      const holdMs = emotion === "sad" ? THRESHOLDS.sadHoldMs : THRESHOLDS.holdMs;
+      const progress = Math.min(1, Math.max(0, (now - start) / holdMs));
       setHolding(emotion);
       setHold(progress);
       if (progress >= 1) {

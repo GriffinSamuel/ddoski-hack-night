@@ -13,6 +13,8 @@ export const THRESHOLDS = {
   superRampStart: 0.8,
   /** Continuous hold needed before a detected emotion fires an edit. */
   holdMs: 1500,
+  /** Sad is harder to hold on a face, so it fires sooner. */
+  sadHoldMs: 600,
   /** Minimum gap between edits triggered by detection. */
   cooldownMs: 6000,
   /** Detection loop pause between frames (about 6 to 7 fps including inference). */

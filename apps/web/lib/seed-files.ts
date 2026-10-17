@@ -6,7 +6,6 @@ export const SEED_FILES: Record<FileName, string> = {
     tmp = 0
     count = len(data)
     for i in range(len(data)):
-        # off by one: the last element is never compared
         for j in range(i + 1, len(data) - 1):
             if data[i] == data[j]:
                 if data[i] not in dupes:

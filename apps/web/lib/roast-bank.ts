@@ -31,8 +31,11 @@ function pickBlock(avatar: AvatarId, emotion: RoastEmotion, mode: RoastMode, wan
 }
 
 /** 2 to 3 roast lines (sad or happy) in the avatar's voice, comment-ready. */
+/** Roasts are capped at two lines so they read instantly on stage. */
+export const MAX_ROAST_LINES = 2;
+
 export function getRoastBlock(avatar: AvatarId, emotion: "sad" | "happy", mode: RoastMode): string[] {
-  return pickBlock(avatar, emotion, mode, Math.random() < 0.5 ? 2 : 3);
+  return pickBlock(avatar, emotion, mode, MAX_ROAST_LINES);
 }
 
 let lastArt = -1;

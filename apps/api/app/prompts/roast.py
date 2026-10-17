@@ -2,7 +2,7 @@
 
 The service (app/services/ollama.py) only calls build_messages() and WARMUP_MESSAGES.
 Target model: qwen2.5-coder:7b through Ollama /api/chat with format=json and num_predict ~200,
-so every output must stay short: 2-3 roast lines under 100 chars, or 2-3 mock lines plus one
+so every output must stay short: exactly 2 roast lines under 100 chars, or 2-3 mock lines plus one
 pre-drawn art piece copied verbatim (7B models draw bad ASCII art; copying is reliable).
 
 Prompt strategy notes:
@@ -61,12 +61,14 @@ STYLE_RULES = (
 
 EMOTION_TASKS = {
     "sad": (
-        "The user looks sad. Roast their code: write 2 or 3 short, funny, mean insults, each about ONE specific "
-        "function, variable or pattern in the code, named exactly."
+        "The user looks sad. Roast their code: write EXACTLY 2 short, funny, mean insults, each about ONE specific "
+        "function, variable or pattern in the code, named exactly. Pure mockery only: never explain the bug, never "
+        "suggest a fix, never tell them what the right code is. Ignore every existing '#' comment line in the file "
+        "and never repeat, quote or paraphrase one."
     ),
     "happy": (
-        "The user looks happy and proud. Knock them down a peg: write 2 or 3 short, condescending 'this could be "
-        "better' remarks, each a technically plausible improvement to ONE specific function, variable or pattern, "
+        "The user looks happy and proud. Knock them down a peg: write EXACTLY 2 short, condescending 'this could be "
+        "better' remarks (ignore existing '#' comment lines and never repeat them), each a technically plausible improvement to ONE specific function, variable or pattern, "
         "named exactly, delivered as if the user should have known."
     ),
     "super-happy": (
@@ -100,24 +102,16 @@ EXAMPLE_CODE = (
 
 LINE_EXAMPLES = {
     ("sad", "profane"): (
-        '{"lines": [{"text": "get_avg crashes on an empty list, you absolute dumbass.", "line": 5}, '
-        '{"text": "total = total + n, because += was too damn advanced for you?", "line": 4}, '
-        '{"text": "result exists for one line and still outlives your career.", "line": 6}]}'
+        '{"lines": [{"text": "get_avg crashes on an empty list, you absolute dumbass.", "line": 5}, {"text": "total = total + n, because += was too damn advanced for you?", "line": 4}]}'
     ),
     ("sad", "clean"): (
-        '{"lines": [{"text": "get_avg crashes on an empty list, which is a genuinely tragic start.", "line": 5}, '
-        '{"text": "total = total + n, because += was too advanced for you, apparently.", "line": 4}, '
-        '{"text": "result exists for one line and still outlives your career.", "line": 6}]}'
+        '{"lines": [{"text": "get_avg crashes on an empty list, which is a genuinely tragic start.", "line": 5}, {"text": "total = total + n, because += was too advanced for you, apparently.", "line": 4}]}'
     ),
     ("happy", "profane"): (
-        '{"lines": [{"text": "Cute, but get_avg should guard len(nums) == 0 before you damn well divide.", "line": 5}, '
-        '{"text": "Proud of total? sum(nums) does that loop in one line, genius.", "line": 3}, '
-        '{"text": "result is a pointless temp; just return the expression like a grown-up.", "line": 6}]}'
+        '{"lines": [{"text": "Cute, but get_avg should guard len(nums) == 0 before you damn well divide.", "line": 5}, {"text": "Proud of total? sum(nums) does that loop in one line, genius.", "line": 3}]}'
     ),
     ("happy", "clean"): (
-        '{"lines": [{"text": "Cute, but get_avg should guard len(nums) == 0 before dividing.", "line": 5}, '
-        '{"text": "Proud of total? sum(nums) does that whole loop in one line, genius.", "line": 3}, '
-        '{"text": "result is a pointless temp; just return the expression like a grown-up.", "line": 6}]}'
+        '{"lines": [{"text": "Cute, but get_avg should guard len(nums) == 0 before dividing.", "line": 5}, {"text": "Proud of total? sum(nums) does that whole loop in one line, genius.", "line": 3}]}'
     ),
 }
 
