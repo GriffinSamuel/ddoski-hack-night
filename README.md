@@ -8,9 +8,8 @@ A VS Code-style editor in the browser (Monaco, dark theme, tabs, status bar). It
 
 ## What it does
 
-- **Sad face:** the avatar dances and pulls mean faces, and 2 to 4 insulting comments are inserted above your cursor line. Your code is never modified.
-- **Happy face:** the avatar turns smug, and condescending "could be better" tips are inserted as comments.
-- **Super-happy face:** a 3-second overlay plays, the whole file is replaced by a mocking comment and ASCII art, and the avatar laughs at you. "Undo roast" or Ctrl+Z brings the code back.
+- **Sad face:** the avatar dances and pulls mean faces, and a 2-line insult is inserted above your cursor line (pure mockery, never advice). At most 3 roasts live in a file; a 4th evicts the oldest, and no line is ever repeated in a session. Your code is never modified.
+- **Happy face:** smile and a 4.5-second unskippable overlay plays, the whole file is replaced by a mocking comment and ASCII art, and the avatar laughs at you. "Undo roast", Ctrl+Z or "Reset" brings the code back.
 - **Three avatars:** Labubu, CalHacks Bear, Rubber Duck. Each has its own voice, so the same code gets roasted differently.
 - **Profane or clean:** mild cursing by default, one hotkey to flip to a clean version of the same jokes.
 - **Private:** the emotion model runs in the browser. Webcam frames never leave it.
@@ -55,13 +54,13 @@ Hidden in the UI, captured at window level, so they work with the editor focused
 |-----|--------|
 | Alt+1 | Force neutral |
 | Alt+2 | Force sad |
-| Alt+3 | Force happy |
-| Alt+4 | Force super-happy |
+| Alt+3 | Force happy (delete + mock) |
+| Alt+4 | Same as Alt+3 |
 | Alt+0 | Pause or resume camera detection |
 | Alt+P | Toggle roast mode, profane or clean (status bar shows "Mode: ...") |
 | Undo roast button / Ctrl+Z | Restore the code from before the last edit |
 
-With the camera, hold a sad, happy, or super-happy face for 1.5 s. After an edit there is a 6 s cooldown.
+With the camera, hold a sad face for about 0.6 s or a smile for 1.5 s. After an edit there is a 6 s cooldown.
 
 ## Architecture
 
@@ -83,7 +82,7 @@ With the camera, hold a sad, happy, or super-happy face for 1.5 s. After an edit
 Full contract in [docs/API.md](docs/API.md). Interactive docs at http://localhost:8000/docs while the backend runs.
 
 - `GET /api/v1/health` returns `status` and `ai_configured` (true once the Ollama warm-up succeeded).
-- `POST /api/v1/roast` takes `code`, `emotion` (sad, happy, super-happy), `avatar`, `mode` (profane, clean) and optional `file_name`. It returns 2 to 4 comment lines (sad, happy) or a mocking comment block plus ASCII art (super-happy). Errors are `ai_unavailable` 503, `ai_error` 502, `ai_timeout` 504, and the client falls back to the bank on any of them.
+- `POST /api/v1/roast` takes `code`, `emotion` (sad, happy, super-happy), `avatar`, `mode` (profane, clean) and optional `file_name`. It returns 2 comment lines (sad; the app no longer sends happy) or a mocking comment block plus ASCII art (super-happy, which the app uses for any smile). Errors are `ai_unavailable` 503, `ai_error` 502, `ai_timeout` 504, and the client falls back to the bank on any of them.
 
 ## Environment variables
 
