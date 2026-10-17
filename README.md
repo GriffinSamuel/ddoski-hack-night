@@ -1,5 +1,7 @@
 # Face-Roast Editor
 
+**Live demo:** https://ddoski-hack-night.vercel.app (frontend only: roasts come from the built-in roast bank; run locally with Ollama for AI-generated roasts) · **Source:** https://github.com/GriffinSamuel/ddoski-hack-night
+
 A webcam reads your mood and a meme avatar punishes your code: sad gets roasted, too happy gets deleted.
 
 A VS Code-style editor in the browser (Monaco, dark theme, tabs, status bar). It is not a real VS Code extension.
