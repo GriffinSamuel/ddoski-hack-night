@@ -18,7 +18,7 @@ import { useHotkeys } from "@/hooks/useHotkeys";
 import { ApiError, createRoast, getHealth } from "@/lib/api";
 import { getAvatar } from "@/lib/avatars";
 import type { EditorController } from "@/lib/editor-controller";
-import { getReplacement, getRoastBlock, MAX_ROAST_LINES } from "@/lib/roast-bank";
+import { bankLines, getReplacement, MAX_ROAST_LINES, shuffle } from "@/lib/roast-bank";
 import { SEED_FILES } from "@/lib/seed-files";
 import type { AiStatus, AvatarId, AvatarState, Emotion, FileName, RoastEmotion, RoastMode } from "@/lib/types";
 
@@ -133,7 +133,12 @@ export function FaceRoastApp() {
           .slice(0, MAX_ROAST_LINES);
       const remember = (lines: string[]) => {
         lines.forEach((l) => recentRoastsRef.current.add(l.toLowerCase()));
-        if (recentRoastsRef.current.size > 40) recentRoastsRef.current.clear();
+        // Whole-session memory; only the very oldest entries go if it ever grows huge.
+        while (recentRoastsRef.current.size > 500) {
+          const oldest = recentRoastsRef.current.values().next().value;
+          if (oldest === undefined) break;
+          recentRoastsRef.current.delete(oldest);
+        }
       };
       if (ai && ai.kind === "lines") {
         const lines = fresh(ai.lines.map((l) => l.text));
@@ -145,9 +150,14 @@ export function FaceRoastApp() {
           return;
         }
       }
-      let lines = fresh(getRoastBlock(a, emotion, m));
-      if (lines.length === 0) lines = fresh(getRoastBlock(a, emotion, m));
-      if (lines.length === 0) lines = getRoastBlock(a, emotion, m).slice(0, 1);
+      // Bank path: unused lines first; when this avatar/emotion/mode bank is exhausted, release only its
+      // own lines so a new cycle starts (no repeats within a cycle).
+      const pool = () => shuffle(bankLines(a, emotion, m));
+      let lines = fresh(pool());
+      if (lines.length === 0) {
+        bankLines(a, emotion, m).forEach((l) => recentRoastsRef.current.delete(l.toLowerCase()));
+        lines = fresh(pool());
+      }
       remember(lines);
       controller.insertComments(file, lines, null);
       setBubble(lines[0]);

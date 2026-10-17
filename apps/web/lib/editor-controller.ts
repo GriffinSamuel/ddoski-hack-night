@@ -2,6 +2,8 @@ import type * as Monaco from "monaco-editor";
 import type { FileName } from "@/lib/types";
 
 const HIGHLIGHT_MS = 1100;
+/** At most this many roast blocks live in a file; inserting another removes the oldest. */
+export const MAX_ROASTS_PER_FILE = 3;
 
 interface Snapshot {
   file: FileName;
@@ -32,6 +34,38 @@ export function createEditorController(
 ): EditorController {
   let snapshot: Snapshot | null = null;
   const timers = new Set<ReturnType<typeof setTimeout>>();
+  // Inserted roast blocks per file, oldest first, as the exact "# ..." lines written.
+  const blocks: Record<string, string[][]> = {};
+
+  /** Drop tracked blocks whose lines are no longer all present (after undo/reset/manual edits). */
+  function pruneBlocks(file: FileName, model: Monaco.editor.ITextModel) {
+    const present = new Set(model.getLinesContent());
+    blocks[file] = (blocks[file] ?? []).filter((b) => b.every((l) => present.has(l)));
+  }
+
+  /** Edit operations that delete every line of the oldest block(s) once the cap is reached. */
+  function evictionOps(file: FileName, model: Monaco.editor.ITextModel): Monaco.editor.IIdentifiedSingleEditOperation[] {
+    pruneBlocks(file, model);
+    const list = blocks[file];
+    const ops: Monaco.editor.IIdentifiedSingleEditOperation[] = [];
+    const lines = model.getLinesContent();
+    while (list.length >= MAX_ROASTS_PER_FILE) {
+      const oldest = list.shift();
+      if (!oldest) break;
+      oldest.forEach((text) => {
+        const idx = lines.indexOf(text);
+        if (idx === -1) return;
+        const line = idx + 1;
+        const range =
+          line < model.getLineCount()
+            ? new monaco.Range(line, 1, line + 1, 1)
+            : new monaco.Range(line, 1, line, model.getLineMaxColumn(line));
+        ops.push({ range, text: "", forceMoveMarkers: true });
+        lines[idx] = "<spent>";
+      });
+    }
+    return ops;
+  }
 
   const modelFor = (file: FileName) => monaco.editor.getModel(monaco.Uri.parse(file));
   const isActive = (file: FileName) => editor.getModel()?.uri.toString() === monaco.Uri.parse(file).toString();
@@ -81,8 +115,15 @@ export function createEditorController(
       const line = Math.min(Math.max(wanted, 1), model.getLineCount());
       setSnapshot({ file, text: model.getValue() });
       const text = lines.map((l) => `# ${l}`).join("\n") + "\n";
-      applyEdit(file, model, new monaco.Range(line, 1, line, 1), text);
-      highlight(file, line, lines.length);
+      const evict = evictionOps(file, model);
+      if (evict.length > 0) {
+        if (isActive(file)) editor.pushUndoStop();
+        model.pushEditOperations(editor.getSelections(), evict, () => null);
+      }
+      const insertAt = Math.min(line, model.getLineCount());
+      applyEdit(file, model, new monaco.Range(insertAt, 1, insertAt, 1), text);
+      (blocks[file] ??= []).push(lines.map((l) => `# ${l}`));
+      highlight(file, insertAt, lines.length);
     },
 
     replaceWithComments(file, lines) {
@@ -91,6 +132,7 @@ export function createEditorController(
       setSnapshot({ file, text: model.getValue() });
       const text = lines.map((l) => `# ${l}`).join("\n") + "\n";
       applyEdit(file, model, model.getFullModelRange(), text);
+      blocks[file] = [];
       highlight(file, 1, lines.length);
     },
 
@@ -101,6 +143,7 @@ export function createEditorController(
       setSnapshot(null);
       if (!model) return null;
       if (model.getValue() !== text) applyEdit(file, model, model.getFullModelRange(), text);
+      pruneBlocks(file, model);
       return file;
     },
 
@@ -109,6 +152,7 @@ export function createEditorController(
       (Object.keys(seeds) as FileName[]).forEach((file) => {
         const model = modelFor(file);
         if (model && model.getValue() !== seeds[file]) applyEdit(file, model, model.getFullModelRange(), seeds[file]);
+        blocks[file] = [];
       });
     },
 

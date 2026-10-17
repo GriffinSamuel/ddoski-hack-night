@@ -6,7 +6,7 @@ const MODE_INDEX: Record<RoastMode, 0 | 1> = { profane: 0, clean: 1 };
 // Lines used in the previous block per avatar/emotion/mode, so no line repeats back to back.
 const lastUsed = new Map<string, string[]>();
 
-function shuffle<T>(items: readonly T[]): T[] {
+export function shuffle<T>(items: readonly T[]): T[] {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
