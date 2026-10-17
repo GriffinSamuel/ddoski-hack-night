@@ -1,4 +1,4 @@
-import { RotateCcw, Undo2 } from "lucide-react";
+import { Play, RotateCcw, Undo2 } from "lucide-react";
 import type { FileName } from "@/lib/types";
 
 interface Props {
@@ -6,13 +6,27 @@ interface Props {
   canUndo: boolean;
   onUndo: () => void;
   onReset: () => void;
+  onRun: () => void;
+  running: boolean;
 }
 
-export function EditorToolbar({ activeFile, canUndo, onUndo, onReset }: Props) {
+export function EditorToolbar({ activeFile, canUndo, onUndo, onReset, onRun, running }: Props) {
   return (
     <div className="h-toolbar shrink-0 flex items-center justify-between px-3 bg-vsc-editor border-b border-vsc-border">
       <span className="text-small text-vsc-dim">roast-workspace &gt; {activeFile}</span>
       <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onRun}
+        disabled={running}
+        title="Run the open file with Python, in your browser"
+        className={`h-6 px-3 flex items-center gap-1.5 text-ui text-white rounded-none bg-emo-happy/80 ${
+          running ? "opacity-50 cursor-wait" : "hover:bg-emo-happy"
+        }`}
+      >
+        <Play size={14} aria-hidden="true" />
+        {running ? "Running..." : "Run"}
+      </button>
       <button
         type="button"
         onClick={onReset}

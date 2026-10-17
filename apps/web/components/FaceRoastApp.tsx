@@ -20,6 +20,8 @@ import { getAvatar } from "@/lib/avatars";
 import type { EditorController } from "@/lib/editor-controller";
 import { bankLines, getReplacement, MAX_ROAST_LINES, shuffle } from "@/lib/roast-bank";
 import { SEED_FILES } from "@/lib/seed-files";
+import { OutputPanel } from "@/components/OutputPanel";
+import { runPython, type RunResult } from "@/lib/python-runner";
 import type { AiStatus, AvatarId, AvatarState, Emotion, FileName, RoastEmotion, RoastMode } from "@/lib/types";
 
 const EditorPane = dynamic(() => import("@/components/EditorPane"), {
@@ -58,6 +60,8 @@ export function FaceRoastApp() {
   const [overlayFile, setOverlayFile] = useState<FileName | null>(null);
   const [aiStatus, setAiStatus] = useState<AiStatus>("unknown");
   const [cursor, setCursor] = useState({ line: 1, column: 1 });
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [running, setRunning] = useState(false);
 
   const controllerRef = useRef<EditorController | null>(null);
   const recentRoastsRef = useRef<Set<string>>(new Set());
@@ -228,6 +232,18 @@ export function FaceRoastApp() {
     if (restored) setActiveFile(restored);
   };
 
+  /** Execute the active file in the browser (Pyodide) and show the output in the terminal panel. */
+  const run = async () => {
+    const controller = controllerRef.current;
+    if (!controller || running) return;
+    setRunning(true);
+    try {
+      setRunResult(await runPython(controller.getCode(activeFile)));
+    } finally {
+      setRunning(false);
+    }
+  };
+
   /** Back to the opening state: seed files, idle avatar, no bubble, bad_code.py active. */
   const reset = () => {
     clearTimeout(reactionTimerRef.current);
@@ -237,6 +253,7 @@ export function FaceRoastApp() {
     setBubble(null);
     setShownEmotion(null);
     setActiveFile("bad_code.py");
+    setRunResult(null);
     markFired();
   };
 
@@ -250,7 +267,7 @@ export function FaceRoastApp() {
         <ExplorerSidebar activeFile={activeFile} onOpen={setActiveFile} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TabBar activeFile={activeFile} onSelect={setActiveFile} />
-          <EditorToolbar activeFile={activeFile} canUndo={canUndo} onUndo={undo} onReset={reset} />
+          <EditorToolbar activeFile={activeFile} canUndo={canUndo} onUndo={undo} onReset={reset} onRun={run} running={running} />
           <div className="relative min-h-0 flex-1">
             <EditorPane
               activeFile={activeFile}
@@ -263,6 +280,7 @@ export function FaceRoastApp() {
             />
             {overlayFile && <DeletionOverlay avatar={avatar} fileName={overlayFile} bubble={bubble} />}
           </div>
+          <OutputPanel result={runResult} running={running} fileName={activeFile} />
         </div>
         <aside className="w-rightcol shrink-0 flex flex-col gap-2 overflow-y-auto border-l border-vsc-border bg-vsc-sidebar p-2">
           <CameraTile videoRef={detector.videoRef} status={detector.cameraStatus} />

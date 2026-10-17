@@ -4,6 +4,10 @@ import type { FileName } from "@/lib/types";
 const HIGHLIGHT_MS = 1100;
 /** At most this many roast blocks live in a file; inserting another removes the oldest. */
 export const MAX_ROASTS_PER_FILE = 3;
+/** Every roast comment starts with this so roasts can be told apart from real comments. */
+export const ROAST_PREFIX = "# » ";
+/** Hard cap on roast lines per file, enforced from the file text itself (survives reloads). */
+export const MAX_ROAST_LINES_PER_FILE = 6;
 
 interface Snapshot {
   file: FileName;
@@ -67,6 +71,22 @@ export function createEditorController(
     return ops;
   }
 
+  /** Delete the top-most roast lines so that, after inserting `incoming` lines, the file holds at most the cap. */
+  function lineCapOps(model: Monaco.editor.ITextModel, incoming: number, alreadyGone: Set<number>): Monaco.editor.IIdentifiedSingleEditOperation[] {
+    const lines = model.getLinesContent();
+    const roastLines = lines.map((t, i) => (t.startsWith(ROAST_PREFIX) && !alreadyGone.has(i + 1) ? i + 1 : -1)).filter((n) => n > 0);
+    const excess = roastLines.length + incoming - MAX_ROAST_LINES_PER_FILE;
+    if (excess <= 0) return [];
+    return roastLines.slice(0, excess).map((line) => ({
+      range:
+        line < model.getLineCount()
+          ? new monaco.Range(line, 1, line + 1, 1)
+          : new monaco.Range(line, 1, line, model.getLineMaxColumn(line)),
+      text: "",
+      forceMoveMarkers: true,
+    }));
+  }
+
   const modelFor = (file: FileName) => monaco.editor.getModel(monaco.Uri.parse(file));
   const isActive = (file: FileName) => editor.getModel()?.uri.toString() === monaco.Uri.parse(file).toString();
   const setSnapshot = (next: Snapshot | null) => {
@@ -114,15 +134,17 @@ export function createEditorController(
       const wanted = atLine !== null && atLine >= 1 && atLine <= model.getLineCount() ? atLine : cursorLine;
       const line = Math.min(Math.max(wanted, 1), model.getLineCount());
       setSnapshot({ file, text: model.getValue() });
-      const text = lines.map((l) => `# ${l}`).join("\n") + "\n";
+      const text = lines.map((l) => `${ROAST_PREFIX}${l}`).join("\n") + "\n";
       const evict = evictionOps(file, model);
+      const gone = new Set(evict.map((op) => op.range.startLineNumber));
+      evict.push(...lineCapOps(model, lines.length, gone));
       if (evict.length > 0) {
         if (isActive(file)) editor.pushUndoStop();
         model.pushEditOperations(editor.getSelections(), evict, () => null);
       }
       const insertAt = Math.min(line, model.getLineCount());
       applyEdit(file, model, new monaco.Range(insertAt, 1, insertAt, 1), text);
-      (blocks[file] ??= []).push(lines.map((l) => `# ${l}`));
+      (blocks[file] ??= []).push(lines.map((l) => `${ROAST_PREFIX}${l}`));
       highlight(file, insertAt, lines.length);
     },
 
