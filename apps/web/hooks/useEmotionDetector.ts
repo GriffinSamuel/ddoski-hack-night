@@ -57,8 +57,10 @@ export function useEmotionDetector({ enabled, onFire }: Options): Detector {
     let cancelled = false;
     let stream: MediaStream | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
 
     async function run() {
+      attempts += 1;
       try {
         const faceapi: FaceApi = await import("@vladmandic/face-api");
         await Promise.all([
@@ -105,8 +107,16 @@ export function useEmotionDetector({ enabled, onFire }: Options): Detector {
           timer = setTimeout(tick, THRESHOLDS.detectIntervalMs);
         };
         void tick();
-      } catch {
-        if (!cancelled) setCameraStatus("unavailable");
+      } catch (err) {
+        // Surface the real reason in DevTools; the UI only shows the manual-mode fallback.
+        console.error("[face-roast] camera/model setup failed:", err);
+        if (cancelled) return;
+        // Transient failures (camera busy, chunk not ready) get a few more tries before manual mode.
+        if (attempts < THRESHOLDS.setupAttempts) {
+          timer = setTimeout(run, THRESHOLDS.setupRetryMs);
+          return;
+        }
+        setCameraStatus("unavailable");
       }
     }
 

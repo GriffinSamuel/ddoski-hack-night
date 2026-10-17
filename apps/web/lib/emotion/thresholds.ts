@@ -19,6 +19,9 @@ export const THRESHOLDS = {
   /** Tiny face detector input size (smaller is faster). */
   detectorInputSize: 224,
   detectorScoreThreshold: 0.4,
+  /** Camera/model setup retries before falling back to manual mode. */
+  setupAttempts: 3,
+  setupRetryMs: 3000,
 } as const;
 
 export const MODEL_URL = "/models";
