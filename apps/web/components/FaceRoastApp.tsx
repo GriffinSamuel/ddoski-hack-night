@@ -31,8 +31,8 @@ const EditorPane = dynamic(() => import("@/components/EditorPane"), {
 const ENABLE_AI = true;
 const ENABLE_DELETION_OVERLAY = true;
 
-const OVERLAY_MS = 3000;
-const OVERLAY_SWAP_MS = 2000;
+const OVERLAY_MS = 4500;
+const OVERLAY_SWAP_MS = 3000;
 const REACTION_MS = 3200;
 
 const STATE_FOR: Record<RoastEmotion, AvatarState> = {

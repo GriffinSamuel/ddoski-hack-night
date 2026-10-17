@@ -98,7 +98,7 @@ body {
 .fr-avatar-in { animation: fr-avatar-in .4s ease-out .8s both }
 .fr-pop { animation: fr-pop .2s ease-out }
 .fr-inserted-line { animation: fr-line-flash 1s ease-out forwards }
-.fr-overlay { animation: fr-overlay-life 3s linear forwards }
-.fr-cover { animation: fr-cover 1.4s ease-in forwards }
-.fr-sweep { animation: fr-sweep 1.4s ease-in forwards }
-.fr-glitch { animation: fr-glitch .25s steps(2) infinite }
+.fr-overlay { animation: fr-overlay-life 4.5s linear forwards }
+.fr-cover { animation: fr-cover 2.2s ease-in forwards }
+.fr-sweep { animation: fr-sweep 2.2s ease-in forwards }
+.fr-glitch { animation: fr-glitch .35s steps(2) infinite }

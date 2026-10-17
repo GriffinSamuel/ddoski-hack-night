@@ -8,7 +8,7 @@ interface Props {
   bubble: string | null;
 }
 
-/** Unskippable ~3 s cover over the Monaco box. The parent unmounts it at 3000 ms. */
+/** Unskippable ~4.5 s cover over the Monaco box. The parent unmounts it at 4500 ms. */
 export function DeletionOverlay({ avatar, fileName, bubble }: Props) {
   return (
     <div className="absolute inset-0 z-50 overflow-hidden fr-overlay cursor-wait select-none">
