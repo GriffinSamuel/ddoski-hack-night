@@ -16,6 +16,8 @@ export interface EditorController {
   replaceWithComments(file: FileName, lines: string[]): void;
   /** Restore the pre-edit text of the last edit. Returns the file that was restored, or null. */
   undoRoast(): FileName | null;
+  /** Put every file back to its seed text and forget the undo snapshot. */
+  resetAll(seeds: Record<FileName, string>): void;
   dispose(): void;
 }
 
@@ -100,6 +102,14 @@ export function createEditorController(
       if (!model) return null;
       if (model.getValue() !== text) applyEdit(file, model, model.getFullModelRange(), text);
       return file;
+    },
+
+    resetAll(seeds) {
+      setSnapshot(null);
+      (Object.keys(seeds) as FileName[]).forEach((file) => {
+        const model = modelFor(file);
+        if (model && model.getValue() !== seeds[file]) applyEdit(file, model, model.getFullModelRange(), seeds[file]);
+      });
     },
 
     dispose() {

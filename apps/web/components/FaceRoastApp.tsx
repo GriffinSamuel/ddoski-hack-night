@@ -19,6 +19,7 @@ import { ApiError, createRoast, getHealth } from "@/lib/api";
 import { getAvatar } from "@/lib/avatars";
 import type { EditorController } from "@/lib/editor-controller";
 import { getReplacement, getRoastBlock } from "@/lib/roast-bank";
+import { SEED_FILES } from "@/lib/seed-files";
 import type { AiStatus, AvatarId, AvatarState, Emotion, FileName, RoastEmotion, RoastMode } from "@/lib/types";
 
 const EditorPane = dynamic(() => import("@/components/EditorPane"), {
@@ -198,6 +199,18 @@ export function FaceRoastApp() {
     if (restored) setActiveFile(restored);
   };
 
+  /** Back to the opening state: seed files, idle avatar, no bubble, bad_code.py active. */
+  const reset = () => {
+    clearTimeout(reactionTimerRef.current);
+    setOverlayFile(null);
+    controllerRef.current?.resetAll(SEED_FILES);
+    setAvatarState("idle");
+    setBubble(null);
+    setShownEmotion(null);
+    setActiveFile("bad_code.py");
+    markFired();
+  };
+
   const displayEmotion: Emotion = shownEmotion ?? detector.top;
 
   return (
@@ -208,7 +221,7 @@ export function FaceRoastApp() {
         <ExplorerSidebar activeFile={activeFile} onOpen={setActiveFile} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TabBar activeFile={activeFile} onSelect={setActiveFile} />
-          <EditorToolbar activeFile={activeFile} canUndo={canUndo} onUndo={undo} />
+          <EditorToolbar activeFile={activeFile} canUndo={canUndo} onUndo={undo} onReset={reset} />
           <div className="relative min-h-0 flex-1">
             <EditorPane
               activeFile={activeFile}
