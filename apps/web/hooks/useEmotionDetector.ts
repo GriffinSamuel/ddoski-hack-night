@@ -91,8 +91,10 @@ export function useEmotionDetector({ enabled, onFire }: Options): Detector {
                     neutral: result.expressions.neutral,
                     sad: result.expressions.sad,
                     happy: result.expressions.happy,
+                    negative:
+                      result.expressions.angry + result.expressions.disgusted + result.expressions.fearful,
                   }
-                : { neutral: 0, sad: 0, happy: 0 };
+                : { neutral: 0, sad: 0, happy: 0, negative: 0 };
               const label: Emotion = result ? classify(raw) : "neutral";
               if (label !== currentRef.current) {
                 currentRef.current = label;

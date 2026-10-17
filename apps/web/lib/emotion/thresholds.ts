@@ -1,7 +1,10 @@
 // All detector tuning lives here so it can be adjusted in venue light.
 export const THRESHOLDS = {
-  /** face-api expressions.sad at or above this (and above happy) counts as sad. */
-  sadMin: 0.3,
+  /** Effective sad score (see sadScore in classify.ts) at or above this counts as sad. */
+  sadMin: 0.12,
+  /** Multipliers that build the effective sad score; face-api's raw "sad" is usually tiny. */
+  sadGain: 2.5,
+  negativeGain: 1.2,
   /** face-api expressions.happy at or above this counts as happy. */
   happyMin: 0.55,
   /** expressions.happy at or above this counts as super-happy. */
