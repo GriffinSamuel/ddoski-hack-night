@@ -193,7 +193,9 @@ export function FaceRoastApp() {
   });
   const { markFired } = detector;
 
-  function trigger(emotion: Emotion) {
+  function trigger(requested: Emotion) {
+    // "happy" is retired: it behaves exactly like super-happy (delete + mock).
+    const emotion: Emotion = requested === "happy" ? "super-happy" : requested;
     if (overlayFile !== null) return;
     if (emotion === "neutral") {
       clearTimeout(reactionTimerRef.current);

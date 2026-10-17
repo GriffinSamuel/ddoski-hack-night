@@ -10,8 +10,7 @@ interface Props {
 const ROWS: { key: Emotion; label: string }[] = [
   { key: "neutral", label: "neutral" },
   { key: "sad", label: "sad" },
-  { key: "happy", label: "happy" },
-  { key: "super-happy", label: "super-happy" },
+  { key: "super-happy", label: "happy" },
 ];
 
 const TEXT_COLOR: Record<Emotion, string> = {
@@ -36,7 +35,7 @@ export function EmotionMeter({ scores, top, hold, holding }: Props) {
       <div className="flex items-baseline justify-between">
         <span className="text-small text-vsc-dim">DETECTED</span>
         <span className={`text-[15px] font-bold uppercase ${TEXT_COLOR[top]}`}>
-          {top} {pct(scores[top])}%
+          {top === "super-happy" ? "happy" : top} {pct(scores[top])}%
         </span>
       </div>
       {ROWS.map(({ key, label }) => (

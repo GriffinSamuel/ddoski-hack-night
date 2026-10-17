@@ -14,7 +14,7 @@ interface Handlers {
 const FORCE_KEYS: Record<string, Emotion> = {
   Digit1: "neutral",
   Digit2: "sad",
-  Digit3: "happy",
+  Digit3: "super-happy",
   Digit4: "super-happy",
 };
 

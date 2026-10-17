@@ -20,19 +20,18 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
 /** Map face-api expression probabilities to the four displayed scores. */
 export function toScores(raw: RawExpressions): EmotionScores {
-  const ramp = (raw.happy - THRESHOLDS.superRampStart) / (1 - THRESHOLDS.superRampStart);
+  // "happy" is retired: any smile drives the single happy state (the old super-happy behavior).
   return {
     neutral: clamp01(raw.neutral),
     sad: sadScore(raw),
-    happy: clamp01(raw.happy),
-    "super-happy": clamp01(ramp),
+    happy: 0,
+    "super-happy": clamp01(raw.happy),
   };
 }
 
 /** Decide the emotion label from raw expression probabilities. */
 export function classify(raw: RawExpressions): Emotion {
   if (sadScore(raw) >= THRESHOLDS.sadMin && raw.happy < THRESHOLDS.happyMin) return "sad";
-  if (raw.happy >= THRESHOLDS.superHappyMin) return "super-happy";
-  if (raw.happy >= THRESHOLDS.happyMin) return "happy";
+  if (raw.happy >= THRESHOLDS.happyMin) return "super-happy";
   return "neutral";
 }
