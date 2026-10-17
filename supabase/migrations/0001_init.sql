@@ -1,0 +1,7 @@
+-- 0001_init.sql: API contract v1
+-- The MVP has no tables. Face-Roast Editor has no login and persists nothing: the roast bank,
+-- seeded files, avatar config, roast mode, and undo snapshot all live in the browser, and the
+-- backend is stateless (health check + Claude roast generation).
+-- See docs/DECISIONS.md: "No login, no Supabase tables for the MVP" (2026-10-16).
+-- This file exists so the migration pipeline has a 0001; it creates nothing. No RLS policies
+-- are needed because there are no tables.
